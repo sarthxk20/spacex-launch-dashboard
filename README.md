@@ -3,6 +3,8 @@
 An interactive, data-driven dashboard visualizing **SpaceX’s rocket launch history**, analyzing mission performance, trends, and success rates — complete with a machine learning success predictor.
 
 ---
+## 🌐 Live Demo  
+🔗 **[View the Dashboard Here](https://spacex-launch-dashboard.streamlit.app)**  
 
 ## 🌌 Overview
 
@@ -51,3 +53,4 @@ git clone https://github.com/yourusername/spacex-dashboard.git
 cd spacex-dashboard
 pip install -r requirements.txt
 streamlit run app.py
+

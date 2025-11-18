@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import plotly.express as px
 from sklearn.model_selection import train_test_split
@@ -8,353 +9,392 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
-# --- Page setup ---
+
+# -------------------------------------------
+# PAGE SETUP
+# -------------------------------------------
 st.set_page_config(page_title="🚀 SpaceX Launch Dashboard", layout="wide")
 
-# --- Center the Sidebar Logo ---
+
+# -------------------------------------------
+# GLOBAL CLEAN DARK THEME + MOBILE CSS
+# -------------------------------------------
 st.markdown("""
     <style>
-        [data-testid="stSidebar"] img {
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
+
+        body, .main {
+            background-color: #0e1117 !important;
+            color: #e6eef0 !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
         }
+
+        h1, h2, h3, h4 {
+            color: #FFFFFF !important;
+            font-weight: 600 !important;
+        }
+
+        .metric-card, .chart-card, .summary-box {
+            background-color: #111827 !important;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 25px;
+        }
+
+        .sidebar-box {
+            background-color: #111827 !important;
+            padding: 18px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            text-align: center;
+        }
+
+        hr {
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        html {
+            scroll-behavior: smooth !important;
+        }
+
+        /* MOBILE OPTIMIZATION */
+        @media (max-width: 768px) {
+            .block-container {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+            h1 { font-size: 26px !important; }
+            h2 { font-size: 20px !important; }
+            h3 { font-size: 16px !important; }
+            p, li { font-size: 14px !important; }
+
+            .metric-card, .chart-card {
+                padding: 14px !important;
+            }
+
+            [data-testid="stSidebar"] {
+                width: 100% !important;
+                max-width: 100% !important;
+                position: relative !important;
+            }
+
+            .js-plotly-plot {
+                max-width: 100% !important;
+                height: auto !important;
+            }
+
+            .stDataFrame {
+                overflow-x: scroll !important;
+            }
+        }
+
     </style>
 """, unsafe_allow_html=True)
 
-# --- Sidebar: SpaceX Branding Card ---
+
+# -------------------------------------------
+# SIDEBAR NAVIGATION (Option B)
+# -------------------------------------------
+st.sidebar.title("Navigate")
+
+section = st.sidebar.radio(
+    "Jump to section:",
+    [
+        "Overview",
+        "Launch Trends",
+        "Performance",
+        "Mission Outcomes",
+        "ML Predictor",
+        "Feature Importance",
+        "Insights",
+        "Data Explorer"
+    ]
+)
+
+slug_map = {
+    "Overview": "overview",
+    "Launch Trends": "launch-trends",
+    "Performance": "performance",
+    "Mission Outcomes": "mission-outcomes",
+    "ML Predictor": "ml-predictor",
+    "Feature Importance": "feature-importance",
+    "Insights": "insights",
+    "Data Explorer": "data-explorer"
+}
+
+selected_slug = slug_map[section]
+
+# GUARANTEED WORKING SCROLLING
+components.html(f"""
+    <script>
+        const el = window.parent.document.getElementById("{selected_slug}");
+        if (el) {{
+            el.scrollIntoView({{behavior: "smooth", block: "start"}});
+        }}
+    </script>
+""", height=0)
+
+
 st.sidebar.markdown("""
-    <div style="
-        background: linear-gradient(145deg, #0f172a, #1e293b);
-        padding: 22px;
-        border-radius: 15px;
-        box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
-        text-align: center;
-        color: white;
-        margin-bottom: 20px;
-    ">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/d/de/SpaceX-Logo.svg" width="180" style="margin-bottom:15px;">
-        <h3 style='margin-bottom: 10px; color: #00FFFF;'>🚀 SpaceX Dashboard</h3>
-        <hr style='border: 1px solid #00FFFF; margin: 10px 0;'>
-        <h4 style='margin-bottom: 8px;'>ℹ️ About This Dashboard</h4>
-        <p style='font-size: 14px; line-height: 1.6;'>
-            This interactive dashboard visualizes <b>SpaceX launch data</b> —
-            exploring mission success trends, rocket & launchpad performance,
-            and predictive insights using machine learning. <br><br>
-            🔹 Built with <b>Streamlit, Plotly & Sklearn</b><br>
-            🔹 Data: SpaceX Launch Archive<br>
-            🔹 Author: <b>Sarthak Shandilya</b>
-        </p>
+    <div class='sidebar-box'>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/d/de/SpaceX-Logo.svg" width="150">
+        <h4>SpaceX Dashboard</h4>
+        <p style='font-size:13px;color:#b9c7c6;'>Interactive analytics powered by Streamlit</p>
     </div>
 """, unsafe_allow_html=True)
 
 
-# --- Custom CSS ---
-st.markdown("""
-    <style>
-        body { background-color: #0e1117; color: white; }
-        .main { background-color: #0e1117; }
-        .glow { color: #00FFFF; text-shadow: 0 0 20px #00FFFF; font-weight: bold; }
-        .metric-card {
-            background: linear-gradient(135deg, #111827, #1f2937);
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
-            text-align: center;
-        }
-        .chart-card {
-            background-color: #111827;
-            padding: 20px;
-            border-radius: 20px;
-            margin-bottom: 30px;
-            box-shadow: 0 0 30px rgba(0, 255, 255, 0.1);
-        }
-        .summary-box {
-            background: linear-gradient(135deg, #0f172a, #1e293b);
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 0 25px rgba(0, 255, 255, 0.15);
-            margin-bottom: 30px;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
-
-# --- Sidebar Hover Glow Effect ---
-st.markdown("""
-    <style>
-        /* Apply hover glow to the sidebar card */
-        [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] > div {
-            transition: all 0.3s ease-in-out;
-        }
-        [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] > div:hover {
-            box-shadow: 0 0 40px rgba(0, 255, 255, 0.4);
-            transform: scale(1.01);
-        }
-    </style>
-""", unsafe_allow_html=True)
-
-
-# --- Load Data ---
+# -------------------------------------------
+# LOAD DATA & MAP REAL ROCKET + LAUNCHPAD NAMES
+# -------------------------------------------
 @st.cache_data
 def load_data():
     df = pd.read_csv("merged_spacex_data.csv")
-    df['date_utc'] = pd.to_datetime(df['date_utc'], errors='coerce')
-    df['year'] = df['date_utc'].dt.year
-    df['success'] = df['success'].astype(str)
+    df["date_utc"] = pd.to_datetime(df["date_utc"], errors="coerce")
+    df["year"] = df["date_utc"].dt.year
+    df["success"] = df["success"].astype(str)
+
+    rocket_map = {
+        "5e9d0d95eda69955f709d1eb": "Falcon 1",
+        "5e9d0d95eda69973a809d1ec": "Falcon 9",
+        "5e9d0d95eda69974db09d1ed": "Falcon Heavy"
+    }
+
+    pad_map = {
+        "5e9e4502f5090995de566f86": "Kwajalein Atoll",
+        "5e9e4501f509094ba4566f84": "Cape Canaveral SFS",
+        "5e9e4502f509092b78566f87": "Kennedy LC-39A",
+        "5e9e4502f509094188566f88": "Vandenberg SFB"
+    }
+
+    df["rocket"] = df["rocket"].apply(lambda x: rocket_map.get(x, x))
+    df["launchpad"] = df["launchpad"].apply(lambda x: pad_map.get(x, x))
+
     return df
+
 
 df = load_data()
 
-# --- Title ---
-st.markdown("<h1 class='glow' style='text-align:center;'>🚀 SpaceX Launch Dashboard</h1>", unsafe_allow_html=True)
+
+# ============================================================
+# 1️⃣ OVERVIEW
+# ============================================================
+st.markdown("<h1 id='overview'>🚀 SpaceX Launch Dashboard</h1>", unsafe_allow_html=True)
 st.markdown("---")
 
-# --- Mission Overview ---
 total_launches = len(df)
-success_count = (df['success'] == "True").sum()
-success_rate = (success_count / total_launches * 100) if total_launches > 0 else 0
-unique_rockets = df['rocket'].nunique()
-unique_launchpads = df['launchpad'].nunique()
-first_year, latest_year = int(df['year'].min()), int(df['year'].max())
-most_successful_rocket = df.groupby("rocket")["success"].apply(lambda x: (x == "True").mean()).idxmax()
-most_active_year = df['year'].value_counts().idxmax()
+success_count = (df["success"] == "True").sum()
+success_rate = success_count / total_launches * 100 if total_launches else 0
+rocket_count = df["rocket"].nunique()
+launchpad_count = df["launchpad"].nunique()
+first_year = int(df["year"].min())
+last_year = int(df["year"].max())
 
 st.markdown(f"""
 <div class='summary-box'>
-    <h2 class='glow'>🧭 SpaceX Mission Overview ({first_year} – {latest_year})</h2>
-    <p>
-        Since <b>{first_year}</b>, SpaceX has launched <b>{total_launches}</b> missions — achieving a stellar <b>{success_rate:.1f}%</b> success rate.
-        Over this period, the company has continuously improved its rockets, reusability, and mission cadence.
-    </p>
-    <p>
-        With <b>{unique_rockets}</b> rocket types launched from <b>{unique_launchpads}</b> global launchpads, SpaceX’s journey highlights
-        technological excellence and operational efficiency. The <b>{most_successful_rocket}</b> remains its most dependable rocket.
-    </p>
-    <p>
-        The year <b>{most_active_year}</b> recorded the highest launch activity, marking SpaceX’s rapid scaling toward consistent orbital success.
-    </p>
+<h2>Mission Overview ({first_year} – {last_year})</h2>
+<p><b>{total_launches}</b> launches — <b>{success_rate:.1f}%</b> success rate.</p>
 </div>
 """, unsafe_allow_html=True)
 
-# --- KPI Section ---
-col1, col2, col3, col4 = st.columns(4)
+c1, c2, c3, c4 = st.columns(4)
+c1.markdown(f"<div class='metric-card'><h4>Total Launches</h4><h2>{total_launches}</h2></div>", unsafe_allow_html=True)
+c2.markdown(f"<div class='metric-card'><h4>Success Rate</h4><h2>{success_rate:.1f}%</h2></div>", unsafe_allow_html=True)
+c3.markdown(f"<div class='metric-card'><h4>Rockets</h4><h2>{rocket_count}</h2></div>", unsafe_allow_html=True)
+c4.markdown(f"<div class='metric-card'><h4>Launchpads</h4><h2>{launchpad_count}</h2></div>", unsafe_allow_html=True)
+
+
+# ============================================================
+# 2️⃣ LAUNCH TRENDS
+# ============================================================
+st.markdown("<h2 id='launch-trends'>📈 Launch Trends</h2>", unsafe_allow_html=True)
+
+col1, col2 = st.columns(2)
+
 with col1:
-    st.markdown(f"<div class='metric-card'><h4>🚀 Total Launches</h4><h2>{total_launches}</h2></div>", unsafe_allow_html=True)
-with col2:
-    st.markdown(f"<div class='metric-card'><h4>✅ Success Rate</h4><h2>{success_rate:.2f}%</h2></div>", unsafe_allow_html=True)
-with col3:
-    st.markdown(f"<div class='metric-card'><h4>🛰️ Rockets Used</h4><h2>{unique_rockets}</h2></div>", unsafe_allow_html=True)
-with col4:
-    st.markdown(f"<div class='metric-card'><h4>🌍 Launchpads</h4><h2>{unique_launchpads}</h2></div>", unsafe_allow_html=True)
-
-st.markdown("---")
-
-# === Launch Trends ===
-st.markdown("<h2 class='glow'>📈 Launch Trends Over the Years</h2>", unsafe_allow_html=True)
-col_a, col_b = st.columns(2)
-
-with col_a:
-    success_trend = (
-        df.groupby("year")["success"]
-        .apply(lambda x: (x == "True").mean() * 100)
-        .reset_index(name="Success Rate (%)")
-    )
+    trend = df.groupby("year")["success"].apply(lambda x: (x == "True").mean() * 100).reset_index()
     st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
-    fig1 = px.line(success_trend, x="year", y="Success Rate (%)", markers=True, color_discrete_sequence=["#00FFFF"])
-    fig1.update_layout(template="plotly_dark", title="Success Rate Over Time", title_x=0.5)
+    fig1 = px.line(trend, x="year", y="success", markers=True)
+    fig1.update_layout(template="plotly_dark", title="Success Rate Over Time")
     st.plotly_chart(fig1, use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-with col_b:
-    launches_per_year = df.groupby("year").size().reset_index(name="Launches")
+with col2:
+    count_year = df.groupby("year").size().reset_index(name="Launches")
     st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
-    fig2 = px.bar(launches_per_year, x="year", y="Launches", color="Launches", color_continuous_scale="tealgrn")
-    fig2.update_layout(template="plotly_dark", title="Total Launches Per Year", title_x=0.5)
+    fig2 = px.bar(count_year, x="year", y="Launches")
+    fig2.update_layout(template="plotly_dark", title="Launches Per Year")
     st.plotly_chart(fig2, use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# === Rocket & Launchpad Performance ===
-st.markdown("<h2 class='glow'>🚀 Rocket & Launchpad Performance</h2>", unsafe_allow_html=True)
-col_c, col_d = st.columns(2)
 
-with col_c:
-    rocket_perf = (
-        df.groupby("rocket")["success"]
-        .apply(lambda x: (x == "True").mean() * 100)
-        .reset_index(name="Success Rate (%)")
-        .sort_values(by="Success Rate (%)", ascending=False)
-    )
+# ============================================================
+# 3️⃣ PERFORMANCE
+# ============================================================
+st.markdown("<h2 id='performance'>🚀 Rocket & Launchpad Performance</h2>", unsafe_allow_html=True)
+
+col1, col2 = st.columns(2)
+
+with col1:
+    rocket_perf = df.groupby("rocket")["success"].apply(lambda x: (x == "True").mean() * 100).reset_index()
     st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
-    fig3 = px.bar(rocket_perf, x="rocket", y="Success Rate (%)",
-                  color="Success Rate (%)", color_continuous_scale="Plotly3")
-    fig3.update_layout(template="plotly_dark", title="Rocket Success Comparison", title_x=0.5)
+    fig3 = px.bar(rocket_perf, x="rocket", y="success")
+    fig3.update_layout(template="plotly_dark", title="Rocket Success Rates")
     st.plotly_chart(fig3, use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-with col_d:
-    launchpad_success = (
-        df.groupby("launchpad")["success"]
-        .apply(lambda x: (x == "True").mean() * 100)
-        .reset_index(name="Success Rate (%)")
-    )
+with col2:
+    pad_perf = df.groupby("launchpad")["success"].apply(lambda x: (x == "True").mean() * 100).reset_index()
     st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
-    fig4 = px.bar(launchpad_success, x="launchpad", y="Success Rate (%)",
-                  color="Success Rate (%)", color_continuous_scale="Plasma")
-    fig4.update_layout(template="plotly_dark", title="Launchpad Success Comparison", title_x=0.5)
+    fig4 = px.bar(pad_perf, x="launchpad", y="success")
+    fig4.update_layout(template="plotly_dark", title="Launchpad Success Rates")
     st.plotly_chart(fig4, use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# === Mission Outcomes & Correlation ===
-st.markdown("<h2 class='glow'>🧭 Mission Outcomes & Feature Correlation</h2>", unsafe_allow_html=True)
-col_e, col_f = st.columns(2)
 
-with col_e:
-    outcome_counts = df["success"].value_counts().reset_index()
-    outcome_counts.columns = ["Outcome", "Count"]
+# ============================================================
+# 4️⃣ MISSION OUTCOMES
+# ============================================================
+st.markdown("<h2 id='mission-outcomes'>🧭 Mission Outcomes</h2>", unsafe_allow_html=True)
+
+col1, col2 = st.columns(2)
+
+with col1:
+    outcome = df["success"].value_counts().reset_index()
+    outcome.columns = ["success", "count"]
+
     st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
-    fig5 = px.pie(outcome_counts, names="Outcome", values="Count",
-                  color_discrete_sequence=["#00FF7F", "#FF4500"])
-    fig5.update_traces(textinfo="percent+label")
-    fig5.update_layout(template="plotly_dark", title="Mission Outcome Distribution", title_x=0.5)
+    fig5 = px.pie(outcome, names="success", values="count")
+    fig5.update_layout(template="plotly_dark", title="Success vs Failure")
     st.plotly_chart(fig5, use_container_width=True)
-    # --- Subheading under the pie chart ---
-    st.markdown("<p style='text-align:center; color:#00FFFF; font-size:16px;'>✔️ This chart compares successful and failed SpaceX missions across all recorded launches.</p>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-with col_f:
+with col2:
     ml_df = df.copy()
-    for col in ['rocket', 'launchpad']:
-        le = LabelEncoder()
-        ml_df[col] = le.fit_transform(ml_df[col])
-    ml_df['success'] = ml_df['success'].apply(lambda x: 1 if x == "True" else 0)
-    corr = ml_df.corr(numeric_only=True)
+
+    for c in ["rocket", "launchpad"]:
+        ml_df[c] = LabelEncoder().fit_transform(ml_df[c].fillna("unknown"))
+
+    ml_df["success"] = ml_df["success"].apply(lambda x: 1 if x == "True" else 0)
+
+    # FIX: only numeric columns allowed
+    corr = ml_df.select_dtypes(include=[np.number]).corr()
+
     st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
-    fig, ax = plt.subplots(figsize=(6, 4))
-    sns.heatmap(corr, annot=True, cmap='cool', ax=ax)
-    st.pyplot(fig)
+    fig6, ax = plt.subplots(figsize=(6, 4))
+    sns.heatmap(corr, annot=True, cmap="cool")
+    st.pyplot(fig6)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# --- Machine Learning Predictor ---
-st.markdown("---")
-st.markdown("<h2 class='glow'>🔮 Launch Success Predictor</h2>", unsafe_allow_html=True)
 
-ml_df = df.copy()
-for col in ['rocket', 'launchpad']:
-    le = LabelEncoder()
-    ml_df[col] = le.fit_transform(ml_df[col])
-ml_df = ml_df.dropna(subset=['success'])
-ml_df['success'] = ml_df['success'].apply(lambda x: 1 if x == "True" else 0)
+# ============================================================
+# 5️⃣ ML PREDICTOR
+# ============================================================
+st.markdown("<h2 id='ml-predictor'>🔮 Launch Success Predictor</h2>", unsafe_allow_html=True)
 
-X = ml_df[['rocket', 'launchpad', 'year']]
-y = ml_df['success']
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-model = LogisticRegression()
-model.fit(X_train, y_train)
+ml = df.copy()
+for c in ["rocket", "launchpad"]:
+    ml[c] = LabelEncoder().fit_transform(ml[c].fillna("unknown"))
+ml["success"] = ml["success"].apply(lambda x: 1 if x == "True" else 0)
+
+X = ml[["rocket", "launchpad", "year"]].fillna(0)
+y = ml["success"]
+
+model = LogisticRegression(max_iter=1000)
+model.fit(X, y)
 
 st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
-st.markdown("<h4 class='glow'>🧠 Predict Launch Success</h4>", unsafe_allow_html=True)
+
 col1, col2, col3 = st.columns(3)
-rockets = df['rocket'].unique().tolist()
-launchpads = df['launchpad'].unique().tolist()
-years = sorted(df['year'].dropna().unique().astype(int))
+
 with col1:
-    rocket_choice = st.selectbox("Select Rocket", rockets)
+    rocket_sel = st.selectbox("Rocket", df["rocket"].unique())
 with col2:
-    launchpad_choice = st.selectbox("Select Launchpad", launchpads)
+    pad_sel = st.selectbox("Launchpad", df["launchpad"].unique())
 with col3:
-    year_choice = st.selectbox("Select Year", years)
-rocket_encoded = LabelEncoder().fit(df['rocket']).transform([rocket_choice])[0]
-launchpad_encoded = LabelEncoder().fit(df['launchpad']).transform([launchpad_choice])[0]
-pred_input = pd.DataFrame([[rocket_encoded, launchpad_encoded, year_choice]], columns=['rocket', 'launchpad', 'year'])
-prob = model.predict_proba(pred_input)[0][1]
-prediction = "✅ Likely to Succeed" if prob > 0.5 else "🚨 Risky Launch"
-st.markdown(f"""
-<div style='text-align:center; font-size:20px;'>
-    <b>Predicted Outcome:</b> {prediction}<br><br>
-    <b>Success Probability:</b> {prob*100:.2f}%
-</div>
-""", unsafe_allow_html=True)
+    year_sel = st.selectbox("Year", sorted(df["year"].dropna().unique()))
+
+r_enc = LabelEncoder().fit(df["rocket"]).transform([rocket_sel])[0]
+p_enc = LabelEncoder().fit(df["launchpad"]).transform([pad_sel])[0]
+
+prob = model.predict_proba([[r_enc, p_enc, year_sel]])[0][1]
+label = "SUCCESS" if prob > 0.5 else "FAILURE"
+
+st.markdown(
+    f"<h3 style='text-align:center;'>Prediction: {label}<br>Probability: {prob*100:.2f}%</h3>",
+    unsafe_allow_html=True
+)
+
 st.markdown("</div>", unsafe_allow_html=True)
 
 
+# ============================================================
+# 6️⃣ FEATURE IMPORTANCE
+# ============================================================
+st.markdown("<h2 id='feature-importance'>📊 Feature Importance</h2>", unsafe_allow_html=True)
 
-# --- Feature Importance Visualization ---
-st.markdown("<h4 class='glow'>📊 Feature Importance</h4>", unsafe_allow_html=True)
-
-import numpy as np
-
-# Get absolute importance values from logistic regression coefficients
 importance = pd.DataFrame({
-    'Feature': X.columns,
-    'Importance': np.abs(model.coef_[0])
-}).sort_values(by='Importance', ascending=False)
+    "Feature": X.columns,
+    "Importance": np.abs(model.coef_[0])
+})
 
 st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
-fig_imp = px.bar(
-    importance,
-    x='Feature',
-    y='Importance',
-    color='Importance',
-    color_continuous_scale='turbo',
-    title='Most Influential Features for Launch Success'
-)
-fig_imp.update_layout(template='plotly_dark', title_x=0.5)
+fig_imp = px.bar(importance, x="Feature", y="Importance")
+fig_imp.update_layout(template="plotly_dark", title="Feature Impact")
 st.plotly_chart(fig_imp, use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 
+# ============================================================
+# 7️⃣ INSIGHTS
+# ============================================================
+st.markdown("<h2 id='insights'>💡 Insights</h2>", unsafe_allow_html=True)
 
-accuracy = model.score(X_test, y_test) * 100
-st.metric("Model Accuracy", f"{accuracy:.2f}%")
-
-
-# --- Key Insights ---
-st.markdown("---")
-st.markdown("<h2 class='glow'>💡 Key Insights</h2>", unsafe_allow_html=True)
 st.markdown("""
-- 🚀 **Falcon 9** dominates as the most reliable and frequently launched rocket.  
-- 🌍 Launches concentrate around a few efficient launchpads, optimizing reusability.  
-- 📈 Success rates have shown a strong upward trend with continuous improvements.  
-- 🔮 Predictive modeling confirms modern rockets yield higher success probabilities.  
-- 🧭 SpaceX’s evolution showcases innovation, precision, and unmatched reliability in orbital missions.  
+- **Falcon 9** shows the highest reliability.  
+- **Kennedy LC-39A** excels as the most successful launchpad.  
+- Success rate has increased significantly over the years.  
+- Launch success is strongly influenced by rocket + launchpad + year.  
 """)
 
-# --- Data Explorer ---
-st.markdown("---")
-st.markdown("<h2 class='glow'>🧮 Data Explorer</h2>", unsafe_allow_html=True)
-with st.expander("🔍 Explore the Dataset"):
-    years = sorted(df['year'].dropna().unique())
-    rockets = sorted(df['rocket'].dropna().unique())
-    launchpads = sorted(df['launchpad'].dropna().unique())
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        year_filter = st.multiselect("Filter by Year", years)
-    with col2:
-        rocket_filter = st.multiselect("Filter by Rocket", rockets)
-    with col3:
-        launchpad_filter = st.multiselect("Filter by Launchpad", launchpads)
-    filtered_df = df.copy()
-    if year_filter:
-        filtered_df = filtered_df[filtered_df['year'].isin(year_filter)]
-    if rocket_filter:
-        filtered_df = filtered_df[filtered_df['rocket'].isin(rocket_filter)]
-    if launchpad_filter:
-        filtered_df = filtered_df[filtered_df['launchpad'].isin(launchpad_filter)]
-    st.dataframe(filtered_df)
 
-with st.expander("🚀 Mission Details"):
-    st.dataframe(df[["name", "date_utc", "rocket", "launchpad", "success", "details"]])
+# ============================================================
+# 8️⃣ DATA EXPLORER
+# ============================================================
+st.markdown("<h2 id='data-explorer'>🧮 Data Explorer</h2>", unsafe_allow_html=True)
 
-# --- Download Section ---
-st.markdown("---")
-st.markdown("<h2 class='glow'>📥 Download Data</h2>", unsafe_allow_html=True)
+with st.expander("🔍 Filter Data"):
+    years = sorted(df["year"].unique())
+    rockets = sorted(df["rocket"].unique())
+    pads = sorted(df["launchpad"].unique())
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        fy = st.multiselect("Year", years)
+    with c2:
+        fr = st.multiselect("Rocket", rockets)
+    with c3:
+        fp = st.multiselect("Launchpad", pads)
+
+    filtered = df.copy()
+    if fy: filtered = filtered[filtered["year"].isin(fy)]
+    if fr: filtered = filtered[filtered["rocket"].isin(fr)]
+    if fp: filtered = filtered[filtered["launchpad"].isin(fp)]
+
+    st.dataframe(filtered)
+
 st.download_button(
-    "📂 Download Filtered Dataset (CSV)",
-    data=filtered_df.to_csv(index=False).encode('utf-8'),
-    file_name='filtered_spacex_data.csv'
+    "Download CSV",
+    filtered.to_csv(index=False).encode("utf-8"),
+    "filtered_spacex_data.csv"
 )
 
-# --- Footer ---
+
+# ============================================================
+# FOOTER
+# ============================================================
 st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:gray;'>Created by <b>Sarthak Shandilya</b> | Powered by Streamlit & Plotly 🚀</p>", unsafe_allow_html=True)
+st.markdown(
+    "<p style='text-align:center;color:gray;'>Created by <b>Sarthak Shandilya</b></p>",
+    unsafe_allow_html=True
+)

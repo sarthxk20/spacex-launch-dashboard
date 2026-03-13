@@ -93,7 +93,7 @@ st.markdown("""
 
 
 # -------------------------------------------
-# SIDEBAR NAVIGATION (Option B)
+# SIDEBAR NAVIGATION
 # -------------------------------------------
 st.sidebar.title("Navigate")
 
@@ -124,7 +124,6 @@ slug_map = {
 
 selected_slug = slug_map[section]
 
-# GUARANTEED WORKING SCROLLING
 components.html(f"""
     <script>
         const el = window.parent.document.getElementById("{selected_slug}");
@@ -145,7 +144,7 @@ st.sidebar.markdown("""
 
 
 # -------------------------------------------
-# LOAD DATA & MAP REAL ROCKET + LAUNCHPAD NAMES
+# LOAD DATA
 # -------------------------------------------
 @st.cache_data
 def load_data():
@@ -159,7 +158,6 @@ def load_data():
         "5e9d0d95eda69973a809d1ec": "Falcon 9",
         "5e9d0d95eda69974db09d1ed": "Falcon Heavy"
     }
-
     pad_map = {
         "5e9e4502f5090995de566f86": "Kwajalein Atoll",
         "5e9e4501f509094ba4566f84": "Cape Canaveral SFS",
@@ -167,13 +165,40 @@ def load_data():
         "5e9e4502f509094188566f88": "Vandenberg SFB"
     }
 
-    df["rocket"] = df["rocket"].apply(lambda x: rocket_map.get(x, x))
+    df["rocket"]    = df["rocket"].apply(lambda x: rocket_map.get(x, x))
     df["launchpad"] = df["launchpad"].apply(lambda x: pad_map.get(x, x))
-
     return df
 
 
 df = load_data()
+
+
+# -------------------------------------------
+# BUILD & CACHE ML MODEL
+# Fit encoders once here so training and prediction
+# always use the exact same category ordering.
+# -------------------------------------------
+@st.cache_resource
+def build_model(df: pd.DataFrame):
+    ml = df.copy()
+    ml["success"] = ml["success"].apply(lambda x: 1 if x == "True" else 0)
+
+    le_rocket = LabelEncoder().fit(ml["rocket"].fillna("unknown"))
+    le_pad    = LabelEncoder().fit(ml["launchpad"].fillna("unknown"))
+
+    ml["rocket_enc"]    = le_rocket.transform(ml["rocket"].fillna("unknown"))
+    ml["launchpad_enc"] = le_pad.transform(ml["launchpad"].fillna("unknown"))
+
+    X = ml[["rocket_enc", "launchpad_enc", "year"]].fillna(0)
+    y = ml["success"]
+
+    model = LogisticRegression(max_iter=1000)
+    model.fit(X, y)
+
+    return model, le_rocket, le_pad, X.columns.tolist()
+
+
+model, le_rocket, le_pad, feature_names = build_model(df)
 
 
 # ============================================================
@@ -182,13 +207,13 @@ df = load_data()
 st.markdown("<h1 id='overview'>🚀 SpaceX Launch Dashboard</h1>", unsafe_allow_html=True)
 st.markdown("---")
 
-total_launches = len(df)
-success_count = (df["success"] == "True").sum()
-success_rate = success_count / total_launches * 100 if total_launches else 0
-rocket_count = df["rocket"].nunique()
+total_launches  = len(df)
+success_count   = (df["success"] == "True").sum()
+success_rate    = success_count / total_launches * 100 if total_launches else 0
+rocket_count    = df["rocket"].nunique()
 launchpad_count = df["launchpad"].nunique()
-first_year = int(df["year"].min())
-last_year = int(df["year"].max())
+first_year      = int(df["year"].min())
+last_year       = int(df["year"].max())
 
 st.markdown(f"""
 <div class='summary-box'>
@@ -216,7 +241,7 @@ with col1:
     st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
     fig1 = px.line(trend, x="year", y="success", markers=True)
     fig1.update_layout(template="plotly_dark", title="Success Rate Over Time")
-    st.plotly_chart(fig1, use_container_width=True)
+    st.plotly_chart(fig1, width="stretch")
     st.markdown("</div>", unsafe_allow_html=True)
 
 with col2:
@@ -224,7 +249,7 @@ with col2:
     st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
     fig2 = px.bar(count_year, x="year", y="Launches")
     fig2.update_layout(template="plotly_dark", title="Launches Per Year")
-    st.plotly_chart(fig2, use_container_width=True)
+    st.plotly_chart(fig2, width="stretch")
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -240,7 +265,7 @@ with col1:
     st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
     fig3 = px.bar(rocket_perf, x="rocket", y="success")
     fig3.update_layout(template="plotly_dark", title="Rocket Success Rates")
-    st.plotly_chart(fig3, use_container_width=True)
+    st.plotly_chart(fig3, width="stretch")
     st.markdown("</div>", unsafe_allow_html=True)
 
 with col2:
@@ -248,7 +273,7 @@ with col2:
     st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
     fig4 = px.bar(pad_perf, x="launchpad", y="success")
     fig4.update_layout(template="plotly_dark", title="Launchpad Success Rates")
-    st.plotly_chart(fig4, use_container_width=True)
+    st.plotly_chart(fig4, width="stretch")
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -266,23 +291,30 @@ with col1:
     st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
     fig5 = px.pie(outcome, names="success", values="count")
     fig5.update_layout(template="plotly_dark", title="Success vs Failure")
-    st.plotly_chart(fig5, use_container_width=True)
+    st.plotly_chart(fig5, width="stretch")
     st.markdown("</div>", unsafe_allow_html=True)
 
 with col2:
-    ml_df = df.copy()
-
-    for c in ["rocket", "launchpad"]:
-        ml_df[c] = LabelEncoder().fit_transform(ml_df[c].fillna("unknown"))
-
-    ml_df["success"] = ml_df["success"].apply(lambda x: 1 if x == "True" else 0)
-
-    # FIX: only numeric columns allowed
-    corr = ml_df.select_dtypes(include=[np.number]).corr()
+    # Build correlation df from the same encoded data the model uses
+    corr_df = df.copy()
+    corr_df["success"]      = corr_df["success"].apply(lambda x: 1 if x == "True" else 0)
+    corr_df["rocket_enc"]   = le_rocket.transform(corr_df["rocket"].fillna("unknown"))
+    corr_df["launchpad_enc"]= le_pad.transform(corr_df["launchpad"].fillna("unknown"))
+    corr = corr_df[["rocket_enc", "launchpad_enc", "year", "success"]].corr()
 
     st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
+    # Match the dark background of the rest of the dashboard
     fig6, ax = plt.subplots(figsize=(6, 4))
-    sns.heatmap(corr, annot=True, cmap="cool")
+    fig6.patch.set_facecolor("#111827")
+    ax.set_facecolor("#111827")
+    sns.heatmap(
+        corr, annot=True, cmap="cool", ax=ax,
+        annot_kws={"color": "white"},
+        linewidths=0.5, linecolor="#1f2937",
+    )
+    ax.tick_params(colors="white")
+    plt.setp(ax.get_xticklabels(), color="white")
+    plt.setp(ax.get_yticklabels(), color="white")
     st.pyplot(fig6)
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -291,17 +323,6 @@ with col2:
 # 5️⃣ ML PREDICTOR
 # ============================================================
 st.markdown("<h2 id='ml-predictor'>🔮 Launch Success Predictor</h2>", unsafe_allow_html=True)
-
-ml = df.copy()
-for c in ["rocket", "launchpad"]:
-    ml[c] = LabelEncoder().fit_transform(ml[c].fillna("unknown"))
-ml["success"] = ml["success"].apply(lambda x: 1 if x == "True" else 0)
-
-X = ml[["rocket", "launchpad", "year"]].fillna(0)
-y = ml["success"]
-
-model = LogisticRegression(max_iter=1000)
-model.fit(X, y)
 
 st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
 
@@ -314,11 +335,13 @@ with col2:
 with col3:
     year_sel = st.selectbox("Year", sorted(df["year"].dropna().unique()))
 
-r_enc = LabelEncoder().fit(df["rocket"]).transform([rocket_sel])[0]
-p_enc = LabelEncoder().fit(df["launchpad"]).transform([pad_sel])[0]
+# Use the same fitted encoders the model was trained with
+r_enc = int(le_rocket.transform([rocket_sel])[0])
+p_enc = int(le_pad.transform([pad_sel])[0])
+y_val = int(year_sel)   # cast numpy int → Python int
 
-prob = model.predict_proba([[r_enc, p_enc, year_sel]])[0][1]
-label = "SUCCESS" if prob > 0.5 else "FAILURE"
+prob  = model.predict_proba([[r_enc, p_enc, y_val]])[0][1]
+label = "SUCCESS ✅" if prob > 0.5 else "FAILURE ❌"
 
 st.markdown(
     f"<h3 style='text-align:center;'>Prediction: {label}<br>Probability: {prob*100:.2f}%</h3>",
@@ -334,14 +357,14 @@ st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("<h2 id='feature-importance'>📊 Feature Importance</h2>", unsafe_allow_html=True)
 
 importance = pd.DataFrame({
-    "Feature": X.columns,
+    "Feature":    ["Rocket", "Launchpad", "Year"],
     "Importance": np.abs(model.coef_[0])
 })
 
 st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
 fig_imp = px.bar(importance, x="Feature", y="Importance")
-fig_imp.update_layout(template="plotly_dark", title="Feature Impact")
-st.plotly_chart(fig_imp, use_container_width=True)
+fig_imp.update_layout(template="plotly_dark", title="Feature Impact on Prediction")
+st.plotly_chart(fig_imp, width="stretch")
 st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -363,10 +386,13 @@ st.markdown("""
 # ============================================================
 st.markdown("<h2 id='data-explorer'>🧮 Data Explorer</h2>", unsafe_allow_html=True)
 
+# Define filtered before the expander so the download button always has it
+filtered = df.copy()
+
 with st.expander("🔍 Filter Data"):
-    years = sorted(df["year"].unique())
+    years   = sorted(df["year"].unique())
     rockets = sorted(df["rocket"].unique())
-    pads = sorted(df["launchpad"].unique())
+    pads    = sorted(df["launchpad"].unique())
 
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -376,7 +402,6 @@ with st.expander("🔍 Filter Data"):
     with c3:
         fp = st.multiselect("Launchpad", pads)
 
-    filtered = df.copy()
     if fy: filtered = filtered[filtered["year"].isin(fy)]
     if fr: filtered = filtered[filtered["rocket"].isin(fr)]
     if fp: filtered = filtered[filtered["launchpad"].isin(fp)]

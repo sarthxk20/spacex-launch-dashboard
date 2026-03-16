@@ -424,7 +424,7 @@ if sec == "Overview":
     fig1 = px.bar(ys, x="year", y="count", color="Outcome",
                   color_discrete_map={"Success": "#34d399", "Failure": "#f87171"},
                   labels={"count": "Launches", "year": "Year"})
-    fig1.update_layout(**CL, title="", bargap=0.25)
+    fig1.update_layout(**CL, title="Launches by Year and Outcome", bargap=0.25)
     st.plotly_chart(fig1, width="stretch")
 
     ca, cb = st.columns(2)
@@ -438,7 +438,7 @@ if sec == "Overview":
         fig2 = px.pie(rd, names="Rocket", values="Launches",
                       color_discrete_sequence=ACCENT, hole=0.5)
         fig2.update_traces(textposition="inside", textinfo="percent+label")
-        fig2.update_layout(**cl(title="", showlegend=True, margin=dict(l=10, r=10, t=10, b=10)))
+        fig2.update_layout(**cl(title="Fleet Composition", showlegend=True, margin=dict(l=10, r=10, t=10, b=10)))
         st.plotly_chart(fig2, width="stretch")
 
     with cb:
@@ -504,7 +504,7 @@ elif sec == "Launch Trends":
     ))
     fig_sr = add_year_markers(fig_sr, yrs)
     fig_sr.update_layout(**cl(
-        title="",
+        title="Mission Success Rate Over Time",
         yaxis=dict(**CL["yaxis"], ticksuffix="%", range=[0, 110]),
     ))
     st.plotly_chart(fig_sr, width="stretch")
@@ -525,7 +525,7 @@ elif sec == "Launch Trends":
         hovertemplate="<b>%{x}</b><br>Launches: %{y}<extra></extra>",
     ))
     fig_cy = add_year_markers(fig_cy, yrs)
-    fig_cy.update_layout(**CL, title="", bargap=0.3)
+    fig_cy.update_layout(**CL, title="Annual Launch Volume", bargap=0.3)
     st.plotly_chart(fig_cy, width="stretch")
 
 
@@ -554,7 +554,7 @@ elif sec == "Performance":
                        text=rp["Success Rate (%)"].round(1))
         fig_r.update_traces(texttemplate="%{text}%", textposition="outside",
                              textfont_color="#64748b")
-        fig_r.update_layout(**CL, title="", coloraxis_showscale=False,
+        fig_r.update_layout(**CL, title="Success Rate by Rocket", coloraxis_showscale=False,
                              yaxis_title="", xaxis_range=[0, 115])
         st.plotly_chart(fig_r, width="stretch")
 
@@ -576,7 +576,7 @@ elif sec == "Performance":
                        text=pp["Success Rate (%)"].round(1))
         fig_p.update_traces(texttemplate="%{text}%", textposition="outside",
                              textfont_color="#64748b")
-        fig_p.update_layout(**CL, title="", coloraxis_showscale=False,
+        fig_p.update_layout(**CL, title="Success Rate by Launchpad", coloraxis_showscale=False,
                              yaxis_title="", xaxis_range=[0, 115])
         st.plotly_chart(fig_p, width="stretch")
 
@@ -595,7 +595,7 @@ elif sec == "Performance":
         labels=dict(color="Success %"),
     )
     fig_hm.update_layout(**cl(
-        title="",
+        title="Success Rate Heatmap — Year by Rocket (%)",
         coloraxis_colorbar=dict(
             tickvals=[0, 50, 100],
             ticktext=["0%", "50%", "100%"],
@@ -630,7 +630,7 @@ elif sec == "Mission Outcomes":
             textposition="outside", textinfo="percent+label",
             hovertemplate="<b>%{label}</b><br>%{value} launches (%{percent})<extra></extra>",
         )
-        fig_pie.update_layout(**cl(title="", margin=dict(l=20, r=20, t=20, b=20)))
+        fig_pie.update_layout(**cl(title="Mission Outcome Split", margin=dict(l=20, r=20, t=20, b=20)))
         st.plotly_chart(fig_pie, width="stretch")
 
     with c2:
@@ -692,7 +692,7 @@ elif sec == "Booster Reuse":
             ),
         ))
         fig_rr.update_layout(**cl(
-            title="",
+            title="Success Rate by Booster Reuse Count",
             xaxis_title="Prior flights of this booster",
             yaxis=dict(**CL["yaxis"], ticksuffix="%", range=[0, 115]),
         ))
@@ -714,7 +714,7 @@ elif sec == "Booster Reuse":
             fill="tozeroy", fillcolor="rgba(245,158,11,0.07)",
             hovertemplate="<b>%{x}</b><br>Avg reuse count: %{y:.1f}<extra></extra>",
         ))
-        fig_ry.update_layout(**CL, title="",
+        fig_ry.update_layout(**CL, title="Average Reuse Count Per Year",
                               xaxis_title="Year",
                               yaxis_title="Avg prior flights")
         st.plotly_chart(fig_ry, width="stretch")
@@ -848,7 +848,8 @@ elif sec == "Feature Importance":
     )
     fig_fi.update_traces(textposition="outside", textfont_color="#475569")
     fig_fi.update_layout(**cl(
-        title="", coloraxis_showscale=False,
+        title="Feature Importances — Random Forest",
+        coloraxis_showscale=False,
         yaxis_title="",
         xaxis_range=[0, fi["Importance"].max() * 1.25],
     ))
@@ -998,7 +999,7 @@ elif sec == "Data Explorer":
         fig_m = px.bar(mini, x="year", y="count", color="Outcome",
                        color_discrete_map={"Success": "#34d399", "Failure": "#f87171"},
                        labels={"count": "Launches", "year": "Year"})
-        fig_m.update_layout(**CL, title="", bargap=0.3)
+        fig_m.update_layout(**CL, title="Filtered Launches by Year and Outcome", bargap=0.3)
         st.plotly_chart(fig_m, width="stretch")
 
     section_label("Launch records")

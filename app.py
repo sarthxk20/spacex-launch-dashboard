@@ -111,6 +111,17 @@ CL = dict(
 )
 ACCENT = ["#3b82f6", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#f43f5e"]
 
+
+def cl(**overrides):
+    """
+    Return a copy of CL with overrides merged in (overrides win).
+    Use instead of update_layout(**CL, key=value) which raises
+    'multiple values for keyword argument' when key already exists in CL.
+    """
+    merged = dict(CL)
+    merged.update(overrides)
+    return merged
+
 MILESTONES = [
     (2010, "Falcon 9 debut"),
     (2015, "First booster landing"),
@@ -427,8 +438,7 @@ if sec == "Overview":
         fig2 = px.pie(rd, names="Rocket", values="Launches",
                       color_discrete_sequence=ACCENT, hole=0.5)
         fig2.update_traces(textposition="inside", textinfo="percent+label")
-        fig2.update_layout(**CL, title=None, showlegend=True,
-                            margin=dict(l=10, r=10, t=10, b=10))
+        fig2.update_layout(**cl(title=None, showlegend=True, margin=dict(l=10, r=10, t=10, b=10)))
         st.plotly_chart(fig2, width="stretch")
 
     with cb:
@@ -493,10 +503,10 @@ elif sec == "Launch Trends":
         hovertemplate="<b>%{x}</b><br>Success rate: %{y:.1f}%<extra></extra>",
     ))
     fig_sr = add_year_markers(fig_sr, yrs)
-    fig_sr.update_layout(
-        **CL, title=None,
+    fig_sr.update_layout(**cl(
+        title=None,
         yaxis=dict(**CL["yaxis"], ticksuffix="%", range=[0, 110]),
-    )
+    ))
     st.plotly_chart(fig_sr, width="stretch")
 
     section_label("Annual launch volume")
@@ -584,15 +594,15 @@ elif sec == "Performance":
         zmin=0, zmax=100, aspect="auto", text_auto=True,
         labels=dict(color="Success %"),
     )
-    fig_hm.update_layout(
-        **CL, title=None,
+    fig_hm.update_layout(**cl(
+        title=None,
         coloraxis_colorbar=dict(
             tickvals=[0, 50, 100],
             ticktext=["0%", "50%", "100%"],
             tickfont=dict(color="#475569"),
             title="",
         ),
-    )
+    ))
     st.plotly_chart(fig_hm, width="stretch")
 
 
@@ -620,8 +630,7 @@ elif sec == "Mission Outcomes":
             textposition="outside", textinfo="percent+label",
             hovertemplate="<b>%{label}</b><br>%{value} launches (%{percent})<extra></extra>",
         )
-        fig_pie.update_layout(**CL, title=None,
-                               margin=dict(l=20, r=20, t=20, b=20))
+        fig_pie.update_layout(**cl(title=None, margin=dict(l=20, r=20, t=20, b=20)))
         st.plotly_chart(fig_pie, width="stretch")
 
     with c2:
@@ -682,11 +691,11 @@ elif sec == "Booster Reuse":
                 "Launches: %{customdata}<extra></extra>"
             ),
         ))
-        fig_rr.update_layout(
-            **CL, title=None,
+        fig_rr.update_layout(**cl(
+            title=None,
             xaxis_title="Prior flights of this booster",
             yaxis=dict(**CL["yaxis"], ticksuffix="%", range=[0, 115]),
-        )
+        ))
         st.plotly_chart(fig_rr, width="stretch")
 
     with c2:
@@ -751,9 +760,12 @@ elif sec == "ML Predictor":
 
     fn_est  = int(df[df["year"] <= int(year_sel)]["flight_number"].max() or fn_max)
     fn_norm = fn_est / fn_max
-    X_in    = [[int(le_r.transform([rocket_sel])[0]),
-                int(le_p.transform([pad_sel])[0]),
-                int(year_sel), fn_norm, reuse_sel]]
+    X_in    = pd.DataFrame(
+        [[int(le_r.transform([rocket_sel])[0]),
+          int(le_p.transform([pad_sel])[0]),
+          int(year_sel), fn_norm, reuse_sel]],
+        columns=["r_enc", "p_enc", "year", "fn_norm", "reuse_count"],
+    )
     prob    = float(clf.predict_proba(X_in)[0][1])
     color   = "#34d399" if prob > 0.5 else "#f87171"
     label   = "SUCCESS" if prob > 0.5 else "FAILURE"
@@ -835,11 +847,11 @@ elif sec == "Feature Importance":
         text=fi["Importance"].round(3),
     )
     fig_fi.update_traces(textposition="outside", textfont_color="#475569")
-    fig_fi.update_layout(
-        **CL, title=None, coloraxis_showscale=False,
+    fig_fi.update_layout(**cl(
+        title=None, coloraxis_showscale=False,
         yaxis_title="",
         xaxis_range=[0, fi["Importance"].max() * 1.25],
-    )
+    ))
     st.plotly_chart(fig_fi, width="stretch")
 
     top_feat = feat_imp.idxmax()

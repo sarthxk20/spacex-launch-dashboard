@@ -16,17 +16,15 @@ from scipy.stats import chi2_contingency
 # ─────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="SpaceX Launch Intelligence",
-    page_icon="🚀",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# THEME — professional dark, consistent spacing
+# THEME
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    /* Base */
     [data-testid="stAppViewContainer"] { background: #05070f; }
     [data-testid="stSidebar"] {
         background: #090d1a !important;
@@ -34,7 +32,6 @@ st.markdown("""
     }
     .block-container { padding: 2rem 2.5rem 3rem 2.5rem; max-width: 1400px; }
 
-    /* Typography */
     h1 {
         font-size: 2rem !important; font-weight: 700 !important;
         background: linear-gradient(90deg, #60a5fa, #a78bfa);
@@ -46,7 +43,6 @@ st.markdown("""
     h3, h4 { color: #94a3b8 !important; }
     p, li  { color: #94a3b8 !important; }
 
-    /* KPI cards */
     .kpi-card {
         background: linear-gradient(145deg, #0f172a, #1a2540);
         border: 1px solid #1e3a5f; border-radius: 12px;
@@ -61,7 +57,6 @@ st.markdown("""
     .kpi-label { font-size: 0.73rem; color: #475569; text-transform: uppercase;
                  letter-spacing: 0.12em; margin-top: 5px; }
 
-    /* Content cards */
     .info-card {
         background: #0a1020; border: 1px solid #1e293b;
         border-left: 3px solid #3b82f6;
@@ -70,7 +65,6 @@ st.markdown("""
     }
     .info-card b { color: #94a3b8; }
 
-    /* Prediction widget */
     .pred-box {
         background: linear-gradient(145deg, #0f172a, #1a2540);
         border: 1px solid #1e3a5f; border-radius: 14px;
@@ -79,7 +73,6 @@ st.markdown("""
     .pred-label { font-size: 1.7rem; font-weight: 800; }
     .pred-sub   { font-size: 0.85rem; color: #475569; margin-top: 6px; }
 
-    /* Insight cards */
     .insight-card {
         background: #080e1c; border: 1px solid #1e293b;
         border-left: 3px solid #3b82f6;
@@ -88,7 +81,6 @@ st.markdown("""
     .insight-title { font-size: 0.95rem; font-weight: 700; color: #cbd5e1; }
     .insight-body  { font-size: 0.84rem; color: #64748b; margin-top: 5px; line-height: 1.6; }
 
-    /* Section divider label */
     .section-label {
         font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.14em;
         color: #334155; font-weight: 600; margin: 20px 0 6px 0;
@@ -105,7 +97,7 @@ st.markdown("""
 # ─────────────────────────────────────────────────────────────────────────────
 # SHARED CHART THEME
 # ─────────────────────────────────────────────────────────────────────────────
-CL = dict(                          # base layout applied to every plotly chart
+CL = dict(
     template="plotly_dark",
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(10,16,32,0.7)",
@@ -119,9 +111,6 @@ CL = dict(                          # base layout applied to every plotly chart
 )
 ACCENT = ["#3b82f6", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#f43f5e"]
 
-# ─────────────────────────────────────────────────────────────────────────────
-# MILESTONES — used as vertical markers on trend charts
-# ─────────────────────────────────────────────────────────────────────────────
 MILESTONES = [
     (2010, "Falcon 9 debut"),
     (2015, "First booster landing"),
@@ -130,11 +119,15 @@ MILESTONES = [
 ]
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# HELPERS
+# ─────────────────────────────────────────────────────────────────────────────
+
 def add_year_markers(fig: go.Figure, years_present: set) -> go.Figure:
     """
-    Add vertical milestone markers using add_shape + add_annotation
-    (never add_vline with annotation params — triggers Plotly _mean bug on
-    date axes and some integer axes in Plotly ≥ 5.18).
+    Add vertical milestone markers using add_shape + add_annotation.
+    Never use add_vline with annotation params — it triggers a Plotly
+    _mean() TypeError on date axes and certain integer axes.
     """
     for year, label in MILESTONES:
         if year not in years_present:
@@ -157,24 +150,22 @@ def add_year_markers(fig: go.Figure, years_present: set) -> go.Figure:
     return fig
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# HELPERS
-# ─────────────────────────────────────────────────────────────────────────────
-
 def cramers_v(a: pd.Series, b: pd.Series) -> float:
     tbl  = pd.crosstab(a.astype(str), b.astype(str)).values
     chi2 = chi2_contingency(tbl, correction=False)[0]
     n    = tbl.sum()
     r, k = tbl.shape
-    return float(np.sqrt(chi2 / n / max(min(k-1, r-1), 1)))
+    return float(np.sqrt(chi2 / n / max(min(k - 1, r - 1), 1)))
 
 
 def kpi(col, value: str, label: str):
-    col.markdown(f"""
-        <div class='kpi-card'>
-            <div class='kpi-value'>{value}</div>
-            <div class='kpi-label'>{label}</div>
-        </div>""", unsafe_allow_html=True)
+    col.markdown(
+        f"<div class='kpi-card'>"
+        f"<div class='kpi-value'>{value}</div>"
+        f"<div class='kpi-label'>{label}</div>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def info(text: str):
@@ -185,11 +176,11 @@ def section_label(text: str):
     st.markdown(f"<div class='section-label'>{text}</div>", unsafe_allow_html=True)
 
 
-def dark_heatmap(matrix: pd.DataFrame, title: str, fmt: str = ".2f"):
+def dark_heatmap(matrix: pd.DataFrame, title: str):
     fig, ax = plt.subplots(figsize=(5.5, 4))
     fig.patch.set_facecolor("#080e1c")
     ax.set_facecolor("#080e1c")
-    sns.heatmap(matrix, annot=True, fmt=fmt, cmap="Blues", ax=ax,
+    sns.heatmap(matrix, annot=True, fmt=".2f", cmap="Blues", ax=ax,
                 annot_kws={"color": "white", "size": 10},
                 linewidths=0.4, linecolor="#111827",
                 cbar_kws={"shrink": 0.75})
@@ -202,7 +193,7 @@ def dark_heatmap(matrix: pd.DataFrame, title: str, fmt: str = ".2f"):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DATA — error handling + graceful unknown ID fallback
+# DATA
 # ─────────────────────────────────────────────────────────────────────────────
 ROCKET_MAP = {
     "5e9d0d95eda69955f709d1eb": "Falcon 1",
@@ -222,34 +213,30 @@ def load_data() -> pd.DataFrame:
     try:
         df = pd.read_csv("merged_spacex_data.csv")
     except FileNotFoundError:
-        st.error("**Data file not found.** Expected `merged_spacex_data.csv` in the "
+        st.error("Data file not found. Expected `merged_spacex_data.csv` in the "
                  "project root. Add the file and restart the app.")
         st.stop()
     except Exception as e:
-        st.error(f"**Failed to load data:** {e}")
+        st.error(f"Failed to load data: {e}")
         st.stop()
 
     missing = {"date_utc", "success", "rocket", "launchpad"} - set(df.columns)
     if missing:
-        st.error(f"**Missing columns:** {missing}")
+        st.error(f"Missing required columns: {missing}")
         st.stop()
 
     df["date_utc"]  = pd.to_datetime(df["date_utc"], errors="coerce")
     df["year"]      = df["date_utc"].dt.year.astype("Int64")
     df["success"]   = df["success"].astype(str)
-
-    # Graceful ID resolution — short strings kept as-is, long GUIDs → friendly label
     df["rocket"]    = df["rocket"].apply(
         lambda x: ROCKET_MAP.get(str(x), x if len(str(x)) < 30 else "Unknown Rocket"))
     df["launchpad"] = df["launchpad"].apply(
         lambda x: PAD_MAP.get(str(x), x if len(str(x)) < 30 else "Unknown Pad"))
 
-    # Flight number as operational-maturity proxy
     if "flight_number" not in df.columns:
         df["flight_number"] = range(1, len(df) + 1)
     df["flight_number"] = pd.to_numeric(df["flight_number"], errors="coerce").fillna(0)
 
-    # Booster reuse proxy: derive from flight_number if column absent
     if "reuse_count" not in df.columns:
         df["reuse_count"] = (df["flight_number"] // 5).clip(0, 10).astype(int)
 
@@ -257,7 +244,7 @@ def load_data() -> pd.DataFrame:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MODEL — Random Forest, 80/20 split, no DataFrame arg to cache_resource
+# MODEL
 # ─────────────────────────────────────────────────────────────────────────────
 @st.cache_resource
 def build_model():
@@ -288,9 +275,10 @@ def build_model():
     y_prob = clf.predict_proba(X_te)[:, 1]
     y_pred = (y_prob >= 0.5).astype(int)
 
-    feat_imp = pd.Series(clf.feature_importances_,
-                          index=["Rocket", "Launchpad", "Year",
-                                 "Flight No.", "Reuse Count"])
+    feat_imp = pd.Series(
+        clf.feature_importances_,
+        index=["Rocket", "Launchpad", "Year", "Flight No.", "Reuse Count"],
+    )
 
     return clf, le_r, le_p, fn_max, feat_imp, {
         "auc":      float(roc_auc_score(y_te, y_prob)),
@@ -326,25 +314,27 @@ with st.sidebar:
 
     section = st.radio(
         "Navigate",
-        ["🏠  Overview",
-         "📈  Launch Trends",
-         "🚀  Performance",
-         "🧭  Mission Outcomes",
-         "🔄  Booster Reuse",
-         "🔮  ML Predictor",
-         "📊  Feature Importance",
-         "💡  Insights",
-         "🗂️  Data Explorer"],
+        [
+            "Overview",
+            "Launch Trends",
+            "Performance",
+            "Mission Outcomes",
+            "Booster Reuse",
+            "ML Predictor",
+            "Feature Importance",
+            "Insights",
+            "Data Explorer",
+        ],
         label_visibility="collapsed",
     )
 
     st.markdown("<hr style='border-color:#111827; margin:12px 0;'>",
                 unsafe_allow_html=True)
 
-    # Global year-range filter wired to all charts
     all_years  = sorted(df["year"].dropna().astype(int).unique())
     year_range = st.slider(
-        "Year range", all_years[0], all_years[-1],
+        "Year range",
+        all_years[0], all_years[-1],
         (all_years[0], all_years[-1]),
         help="Filters all charts and computed values across every section.",
     )
@@ -356,19 +346,29 @@ with st.sidebar:
                         font-size:0.68rem; text-transform:uppercase; letter-spacing:0.1em;'>
                 Dataset
             </div>
-            <div>Launches &nbsp;<span style='color:#3b82f6; float:right;'>{len(df):,}</span></div>
-            <div>Success rate &nbsp;<span style='color:#34d399; float:right;'>{sr_all:.1f}%</span></div>
-            <div>Rockets &nbsp;<span style='color:#a78bfa; float:right;'>{df["rocket"].nunique()}</span></div>
-            <div>Launchpads &nbsp;<span style='color:#fb923c; float:right;'>{df["launchpad"].nunique()}</span></div>
+            <div>Launches
+                <span style='color:#3b82f6; float:right;'>{len(df):,}</span>
+            </div>
+            <div>Success rate
+                <span style='color:#34d399; float:right;'>{sr_all:.1f}%</span>
+            </div>
+            <div>Rockets
+                <span style='color:#a78bfa; float:right;'>{df["rocket"].nunique()}</span>
+            </div>
+            <div>Launchpads
+                <span style='color:#fb923c; float:right;'>{df["launchpad"].nunique()}</span>
+            </div>
             <div style='margin-top:6px; border-top:1px solid #111827; padding-top:6px;'>
-            Model AUC (test) &nbsp;<span style='color:#34d399; float:right;'>{metrics["auc"]:.3f}</span></div>
+                Model AUC (test)
+                <span style='color:#34d399; float:right;'>{metrics["auc"]:.3f}</span>
+            </div>
         </div>
     """, unsafe_allow_html=True)
 
-# Filtered working copy — used by every section
-sec  = section.split("  ", 1)[-1].strip()
-dff  = df[(df["year"] >= year_range[0]) & (df["year"] <= year_range[1])].copy()
-yrs  = set(dff["year"].dropna().astype(int).unique())
+# Filtered working copy
+sec     = section.strip()
+dff     = df[(df["year"] >= year_range[0]) & (df["year"] <= year_range[1])].copy()
+yrs     = set(dff["year"].dropna().astype(int).unique())
 base_sr = (dff["success"] == "True").mean() * 100
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -377,37 +377,36 @@ base_sr = (dff["success"] == "True").mean() * 100
 st.markdown("<h1>SpaceX Launch Intelligence</h1>", unsafe_allow_html=True)
 col_hdr, col_yr = st.columns([3, 1])
 with col_hdr:
-    st.markdown(f"<h2>{section}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2>{sec}</h2>", unsafe_allow_html=True)
 with col_yr:
     if year_range != (all_years[0], all_years[-1]):
         st.markdown(
             f"<p style='text-align:right; color:#334155; font-size:0.78rem; "
-            f"margin-top:6px;'>📅 {year_range[0]}–{year_range[1]}"
-            f" &nbsp;({len(dff):,} launches)</p>",
+            f"margin-top:6px;'>{year_range[0]}-{year_range[1]}"
+            f" ({len(dff):,} launches)</p>",
             unsafe_allow_html=True)
 st.markdown("<hr style='border-color:#111827; margin:6px 0 20px;'>",
             unsafe_allow_html=True)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# ── OVERVIEW ─────────────────────────────────────────────────────────────────
+# OVERVIEW
 # ═════════════════════════════════════════════════════════════════════════════
 if sec == "Overview":
 
     c1, c2, c3, c4, c5 = st.columns(5)
-    kpi(c1, f"{len(dff):,}",                    "Total Launches")
-    kpi(c2, f"{base_sr:.1f}%",                  "Success Rate")
-    kpi(c3, str(dff["rocket"].nunique()),         "Rocket Types")
-    kpi(c4, str(dff["launchpad"].nunique()),      "Launchpads")
-    kpi(c5, f"{metrics['auc']:.3f}",             "Model AUC (test set)")
+    kpi(c1, f"{len(dff):,}",               "Total Launches")
+    kpi(c2, f"{base_sr:.1f}%",             "Success Rate")
+    kpi(c3, str(dff["rocket"].nunique()),    "Rocket Types")
+    kpi(c4, str(dff["launchpad"].nunique()), "Launchpads")
+    kpi(c5, f"{metrics['auc']:.3f}",        "Model AUC (test set)")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Chart 1 — launches by year, stacked success / failure
-    section_label("Launch volume & outcomes by year")
+    section_label("Launch volume and outcomes by year")
     info("<b>What this shows:</b> Annual launch count coloured by outcome. "
          "Rising green bars reflect both increased cadence and improving reliability. "
-         "Early failures (red) are concentrated in the Falcon 1 era.")
+         "Early failures are concentrated in the Falcon 1 era (pre-2010).")
 
     ys = dff.groupby(["year", "success"]).size().reset_index(name="count")
     ys["Outcome"] = ys["success"].map({"True": "Success", "False": "Failure"})
@@ -417,7 +416,6 @@ if sec == "Overview":
     fig1.update_layout(**CL, title=None, bargap=0.25)
     st.plotly_chart(fig1, width="stretch")
 
-    # Chart 2 — fleet composition donut
     ca, cb = st.columns(2)
     with ca:
         section_label("Fleet composition")
@@ -430,36 +428,37 @@ if sec == "Overview":
                       color_discrete_sequence=ACCENT, hole=0.5)
         fig2.update_traces(textposition="inside", textinfo="percent+label")
         fig2.update_layout(**CL, title=None, showlegend=True,
-                           margin=dict(l=10, r=10, t=10, b=10))
+                            margin=dict(l=10, r=10, t=10, b=10))
         st.plotly_chart(fig2, width="stretch")
 
     with cb:
         section_label("About this project")
         st.markdown(f"""
         <div style='background:#080e1c; border:1px solid #1e293b; border-radius:12px;
-                    padding:20px; height:100%; font-size:0.84rem; line-height:1.7;'>
+                    padding:20px; font-size:0.84rem; line-height:1.7;'>
             <div style='color:#475569; font-size:0.68rem; font-weight:600;
                         text-transform:uppercase; letter-spacing:0.12em;
-                        margin-bottom:10px;'>Data Source & Methodology</div>
+                        margin-bottom:10px;'>Data Source and Methodology</div>
             <p style='color:#64748b !important;'>
-                Data from the <a href='https://github.com/r-spacex/SpaceX-API'
-                style='color:#3b82f6;'>unofficial SpaceX REST API</a> —
+                Data sourced from the
+                <a href='https://github.com/r-spacex/SpaceX-API'
+                   style='color:#3b82f6;'>unofficial SpaceX REST API</a> —
                 {int(df["year"].min())}–{int(df["year"].max())},
                 {len(df):,} launches across {df["rocket"].nunique()} rocket
-                variants and {df["launchpad"].nunique()} launchpads.
+                variants and {df["launchpad"].nunique()} launch sites.
             </p>
             <p style='color:#64748b !important;'>
                 <b style='color:#94a3b8;'>ML model:</b> Random Forest (300 trees,
-                class-balanced) trained on an 80/20 stratified split.
-                Features: rocket, launchpad, year, flight number, reuse count.
+                class-balanced) on an 80/20 stratified split. Features: rocket,
+                launchpad, year, flight number, booster reuse count.
                 Test AUC <b style='color:#34d399;'>{metrics["auc"]:.3f}</b>,
                 accuracy <b style='color:#34d399;'>{metrics["accuracy"]*100:.1f}%</b>
                 on {metrics["n_test"]} held-out launches.
             </p>
             <p style='color:#64748b !important;'>
                 <b style='color:#94a3b8;'>Association analysis</b> uses
-                Cramér's V — the correct statistic for categorical variables.
-                Pearson correlation on label-encoded strings is meaningless.
+                Cramer's V — the statistically correct measure for
+                categorical variables.
             </p>
             <p style='color:#475569 !important; font-size:0.76rem;'>
                 Python · Pandas · Streamlit · Plotly · scikit-learn · SciPy
@@ -469,16 +468,15 @@ if sec == "Overview":
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# ── LAUNCH TRENDS ─────────────────────────────────────────────────────────────
+# LAUNCH TRENDS
 # ═════════════════════════════════════════════════════════════════════════════
 elif sec == "Launch Trends":
 
-    # Chart 1 — success rate over time
     section_label("Mission success rate over time")
     info("<b>What this shows:</b> Annual success rate as a percentage. "
-         "The steep rise after 2015 coincides with mastery of propulsive landing and "
-         "rapid iteration on Falcon 9 Block versions. "
-         "Dotted lines mark key milestones.")
+         "The steep rise after 2015 coincides with mastery of propulsive landing "
+         "and rapid iteration on Falcon 9 Block versions. "
+         "Dotted lines mark key programme milestones.")
 
     trend = (dff.groupby("year")["success"]
              .apply(lambda x: (x == "True").mean() * 100)
@@ -489,20 +487,22 @@ elif sec == "Launch Trends":
         x=trend["year"], y=trend["Success Rate (%)"],
         mode="lines+markers",
         line=dict(color="#3b82f6", width=2.5),
-        marker=dict(size=7, color="#60a5fa", line=dict(color="#0f172a", width=1.5)),
+        marker=dict(size=7, color="#60a5fa",
+                    line=dict(color="#0f172a", width=1.5)),
         fill="tozeroy", fillcolor="rgba(59,130,246,0.07)",
         hovertemplate="<b>%{x}</b><br>Success rate: %{y:.1f}%<extra></extra>",
     ))
     fig_sr = add_year_markers(fig_sr, yrs)
-    fig_sr.update_layout(**CL, title=None,
-                          yaxis=dict(**CL["yaxis"], ticksuffix="%", range=[0, 110]))
+    fig_sr.update_layout(
+        **CL, title=None,
+        yaxis=dict(**CL["yaxis"], ticksuffix="%", range=[0, 110]),
+    )
     st.plotly_chart(fig_sr, width="stretch")
 
-    # Chart 2 — launches per year
     section_label("Annual launch volume")
     info("<b>What this shows:</b> Total launches per year. "
-         "The exponential growth after 2017 reflects Starlink constellation deployment "
-         "and the commercial smallsat rideshare programme.")
+         "The exponential growth after 2017 reflects Starlink constellation "
+         "deployment and the commercial smallsat rideshare programme.")
 
     cy = dff.groupby("year").size().reset_index(name="Launches")
     fig_cy = go.Figure(go.Bar(
@@ -520,7 +520,7 @@ elif sec == "Launch Trends":
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# ── PERFORMANCE ───────────────────────────────────────────────────────────────
+# PERFORMANCE
 # ═════════════════════════════════════════════════════════════════════════════
 elif sec == "Performance":
 
@@ -528,10 +528,9 @@ elif sec == "Performance":
 
     with c1:
         section_label("Success rate by rocket")
-        info("<b>What this shows:</b> Mission success percentage per rocket type, "
-             "with launch count on hover. "
-             "Falcon 1 failed early missions as SpaceX refined launch operations. "
-             "Falcon 9 and Heavy represent mature, production-ready vehicles.")
+        info("<b>What this shows:</b> Mission success percentage per rocket type. "
+             "Falcon 1 failed early missions as SpaceX refined operations. "
+             "Falcon 9 and Falcon Heavy represent mature, production-ready vehicles.")
         rp = (dff.groupby("rocket")["success"]
               .apply(lambda x: (x == "True").mean() * 100)
               .reset_index(name="Success Rate (%)"))
@@ -552,8 +551,8 @@ elif sec == "Performance":
     with c2:
         section_label("Success rate by launchpad")
         info("<b>What this shows:</b> Mission success rate per launch site. "
-             "Kennedy LC-39A (originally built for Apollo) handles the most demanding "
-             "missions. Kwajalein Atoll hosted early Falcon 1 attempts.")
+             "Kennedy LC-39A (originally built for Apollo) handles the most "
+             "demanding missions. Kwajalein Atoll hosted early Falcon 1 attempts.")
         pp = (dff.groupby("launchpad")["success"]
               .apply(lambda x: (x == "True").mean() * 100)
               .reset_index(name="Success Rate (%)"))
@@ -571,11 +570,10 @@ elif sec == "Performance":
                              yaxis_title="", xaxis_range=[0, 115])
         st.plotly_chart(fig_p, width="stretch")
 
-    # Heatmap — year × rocket success rates
-    section_label("Success rate heatmap — year × rocket")
+    section_label("Success rate heatmap — year by rocket")
     info("<b>What this shows:</b> Each cell is the success rate for a given rocket "
-         "in a given year. Empty cells mean no launches that year. "
-         "The shift from red/empty to solid green tracks SpaceX's reliability journey.")
+         "in a given year. Empty cells indicate no launches that year. "
+         "The shift from dark red to solid green tracks SpaceX's reliability journey.")
     pivot = (dff.groupby(["year", "rocket"])["success"]
              .apply(lambda x: round((x == "True").mean() * 100, 1))
              .unstack(fill_value=None))
@@ -583,22 +581,23 @@ elif sec == "Performance":
         pivot,
         color_continuous_scale=[[0, "#1a0a0a"], [0.4, "#7f1d1d"],
                                  [0.7, "#1e3a5f"], [1, "#34d399"]],
-        zmin=0, zmax=100,
-        aspect="auto", text_auto=True,
+        zmin=0, zmax=100, aspect="auto", text_auto=True,
         labels=dict(color="Success %"),
     )
-    fig_hm.update_layout(**CL, title=None,
-                          coloraxis_colorbar=dict(
-                              tickvals=[0, 50, 100],
-                              ticktext=["0%", "50%", "100%"],
-                              tickfont=dict(color="#475569"),
-                              title="",
-                          ))
+    fig_hm.update_layout(
+        **CL, title=None,
+        coloraxis_colorbar=dict(
+            tickvals=[0, 50, 100],
+            ticktext=["0%", "50%", "100%"],
+            tickfont=dict(color="#475569"),
+            title="",
+        ),
+    )
     st.plotly_chart(fig_hm, width="stretch")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# ── MISSION OUTCOMES ──────────────────────────────────────────────────────────
+# MISSION OUTCOMES
 # ═════════════════════════════════════════════════════════════════════════════
 elif sec == "Mission Outcomes":
 
@@ -607,19 +606,18 @@ elif sec == "Mission Outcomes":
     with c1:
         section_label("Success vs failure split")
         info("<b>What this shows:</b> Overall proportion of successful vs failed "
-             "missions in the selected period. "
-             "The fleet-wide success rate has risen dramatically — "
-             "filter the year range to isolate different eras.")
+             "missions in the selected period. Use the year range slider to isolate "
+             "different eras and see how the ratio changes.")
         oc = dff["success"].value_counts().reset_index()
         oc.columns = ["outcome", "count"]
         oc["label"] = oc["outcome"].map({"True": "Success", "False": "Failure"})
         fig_pie = px.pie(oc, names="label", values="count",
                          color="label",
-                         color_discrete_map={"Success": "#34d399", "Failure": "#f87171"},
+                         color_discrete_map={"Success": "#34d399",
+                                              "Failure": "#f87171"},
                          hole=0.55)
         fig_pie.update_traces(
-            textposition="outside",
-            textinfo="percent+label",
+            textposition="outside", textinfo="percent+label",
             hovertemplate="<b>%{label}</b><br>%{value} launches (%{percent})<extra></extra>",
         )
         fig_pie.update_layout(**CL, title=None,
@@ -627,11 +625,12 @@ elif sec == "Mission Outcomes":
         st.plotly_chart(fig_pie, width="stretch")
 
     with c2:
-        section_label("Cramér's V association matrix")
+        section_label("Cramer's V association matrix")
         info("<b>What this shows:</b> How strongly each variable is associated with "
-             "the others. Cramér's V is the correct statistic for categorical data "
-             "(range 0 = no association → 1 = perfect association). "
-             "Unlike Pearson, it does not require numeric inputs.")
+             "the others. Cramer's V is the correct statistic for categorical data "
+             "(0 = no association, 1 = perfect association). "
+             "Unlike Pearson correlation, it does not require numeric inputs and "
+             "is valid for nominal categories.")
         with st.spinner("Computing associations..."):
             cv = pd.DataFrame(
                 [[cramers_v(dff[a].astype(str), dff[b].astype(str))
@@ -640,18 +639,18 @@ elif sec == "Mission Outcomes":
                 index=["Rocket", "Launchpad", "Outcome"],
                 columns=["Rocket", "Launchpad", "Outcome"],
             ).round(3)
-        fig_cv = dark_heatmap(cv, "Cramér's V — variable associations")
+        fig_cv = dark_heatmap(cv, "Cramer's V — variable associations")
         st.pyplot(fig_cv)
         plt.close(fig_cv)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# ── BOOSTER REUSE ─────────────────────────────────────────────────────────────
+# BOOSTER REUSE
 # ═════════════════════════════════════════════════════════════════════════════
 elif sec == "Booster Reuse":
 
     info("<b>SpaceX's defining achievement</b> is landing and reflying orbital-class "
-         "boosters. This section asks the key question: does reusing a booster "
+         "boosters. This section asks the critical question: does reusing a booster "
          "compromise reliability?")
 
     c1, c2 = st.columns(2)
@@ -660,8 +659,8 @@ elif sec == "Booster Reuse":
         section_label("Success rate by prior reuse count")
         info("<b>What this shows:</b> Mission success rate grouped by how many times "
              "the booster had flown before. A flat or rising line confirms that reuse "
-             "does not degrade reliability — and may even improve it as teams learn "
-             "the booster's behaviour.")
+             "does not degrade reliability — and may improve it as teams learn "
+             "each booster's behaviour.")
         by_r = (dff.groupby("reuse_count")
                 .agg(rate=("success", lambda x: (x == "True").mean() * 100),
                      count=("success", "count"))
@@ -683,15 +682,17 @@ elif sec == "Booster Reuse":
                 "Launches: %{customdata}<extra></extra>"
             ),
         ))
-        fig_rr.update_layout(**CL, title=None,
-                              xaxis_title="Prior flights of this booster",
-                              yaxis=dict(**CL["yaxis"], ticksuffix="%", range=[0, 115]))
+        fig_rr.update_layout(
+            **CL, title=None,
+            xaxis_title="Prior flights of this booster",
+            yaxis=dict(**CL["yaxis"], ticksuffix="%", range=[0, 115]),
+        )
         st.plotly_chart(fig_rr, width="stretch")
 
     with c2:
         section_label("Average reuse count per year")
         info("<b>What this shows:</b> How the average number of prior booster flights "
-             "has grown over time. A rising trend shows that SpaceX is increasingly "
+             "has grown over time. A rising trend shows SpaceX is increasingly "
              "comfortable flying boosters multiple times per year.")
         ry = (dff.groupby("year")["reuse_count"]
               .mean().reset_index(name="Avg Reuse Count"))
@@ -709,26 +710,22 @@ elif sec == "Booster Reuse":
                               yaxis_title="Avg prior flights")
         st.plotly_chart(fig_ry, width="stretch")
 
-    # KPI summary
-    mr = int(dff["reuse_count"].max())
-    ar = dff["reuse_count"].mean()
-    rl = int((dff["reuse_count"] > 0).sum())
     k1, k2, k3 = st.columns(3)
-    kpi(k1, str(mr),       "Max Reuse Count")
-    kpi(k2, f"{ar:.1f}",   "Avg Reuse Count")
-    kpi(k3, str(rl),        "Reflown Launches")
+    kpi(k1, str(int(dff["reuse_count"].max())),       "Max Reuse Count")
+    kpi(k2, f"{dff['reuse_count'].mean():.1f}",        "Avg Reuse Count")
+    kpi(k3, str(int((dff["reuse_count"] > 0).sum())), "Reflown Launches")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# ── ML PREDICTOR ──────────────────────────────────────────────────────────────
+# ML PREDICTOR
 # ═════════════════════════════════════════════════════════════════════════════
 elif sec == "ML Predictor":
 
     info(
-        f"<b>Random Forest Classifier</b> — 300 trees · max depth 8 · class-balanced · "
-        f"80/20 stratified split · {metrics['n_train']:,} training launches · "
-        f"{metrics['n_test']:,} test launches.&ensp;"
-        f"Test AUC: <b style='color:#34d399;'>{metrics['auc']:.3f}</b>&ensp;"
+        f"<b>Random Forest Classifier</b> — 300 trees, max depth 8, class-balanced, "
+        f"80/20 stratified split. "
+        f"Trained on {metrics['n_train']:,} launches, evaluated on {metrics['n_test']:,}. "
+        f"Test AUC: <b style='color:#34d399;'>{metrics['auc']:.3f}</b>  "
         f"Accuracy: <b style='color:#34d399;'>{metrics['accuracy']*100:.1f}%</b>"
     )
 
@@ -736,18 +733,21 @@ elif sec == "ML Predictor":
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         rocket_sel = st.selectbox("Rocket", sorted(df["rocket"].unique()),
-                                   help="Rocket vehicle for the mission")
+                                   help="Rocket vehicle for the mission.")
     with c2:
         pad_sel    = st.selectbox("Launchpad", sorted(df["launchpad"].unique()),
-                                   help="Launch site")
+                                   help="Launch site.")
     with c3:
-        year_sel   = st.selectbox("Year", sorted(df["year"].dropna().unique()),
-                                   index=len(sorted(df["year"].dropna().unique()))-1,
-                                   help="Planned year of launch")
+        year_sel   = st.selectbox(
+            "Year", sorted(df["year"].dropna().unique()),
+            index=len(sorted(df["year"].dropna().unique())) - 1,
+            help="Planned year of launch.",
+        )
     with c4:
-        reuse_sel  = st.slider("Booster reuse count", 0, 10, 0,
-                                help="Number of prior flights on this booster. "
-                                     "0 = brand-new booster.")
+        reuse_sel  = st.slider(
+            "Booster reuse count", 0, 10, 0,
+            help="Number of prior flights on this booster. 0 = brand new.",
+        )
 
     fn_est  = int(df[df["year"] <= int(year_sel)]["flight_number"].max() or fn_max)
     fn_norm = fn_est / fn_max
@@ -762,8 +762,9 @@ elif sec == "ML Predictor":
     st.markdown(f"""
         <div class='pred-box'>
             <div class='pred-label' style='color:{color};'>{label}</div>
-            <div class='pred-sub'>Predicted probability: <b style='color:{color};'>
-                {prob*100:.2f}%</b></div>
+            <div class='pred-sub'>Predicted probability:
+                <b style='color:{color};'>{prob*100:.2f}%</b>
+            </div>
             <div style='background:#111827; border-radius:8px; height:8px;
                         margin:16px auto; max-width:360px; overflow:hidden;'>
                 <div style='background:{color}; width:{min(prob*100,100):.1f}%;
@@ -771,28 +772,31 @@ elif sec == "ML Predictor":
             </div>
             <div style='color:#334155; font-size:0.76rem;'>
                 {rocket_sel} &nbsp;·&nbsp; {pad_sel} &nbsp;·&nbsp;
-                {int(year_sel)} &nbsp;·&nbsp; Reuse ×{reuse_sel}
+                {int(year_sel)} &nbsp;·&nbsp; Reuse x{reuse_sel}
             </div>
             <div style='margin-top:10px; font-size:0.78rem; color:#334155;'>
                 Fleet-wide historical success rate: {base_sr:.1f}%
-                &nbsp;·&nbsp;
-                Model delta: <span style='color:{color};'>
-                {"+" if delta >= 0 else ""}{delta:.1f}%</span>
+                &nbsp;·&nbsp; Model delta:
+                <span style='color:{color};'>
+                    {"+" if delta >= 0 else ""}{delta:.1f}%
+                </span>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-    # Confusion matrix
     section_label("Model evaluation — confusion matrix (test set)")
-    info("<b>What this shows:</b> How often the model was right and wrong on the "
-         f"{metrics['n_test']} launches it never saw during training. "
-         "Top-left = correctly predicted failures. Bottom-right = correctly predicted successes. "
-         "Off-diagonal cells are errors.")
-    cm = metrics["cm"]
+    info(
+        "<b>What this shows:</b> How often the model was correct on the "
+        f"{metrics['n_test']} launches it never saw during training. "
+        "Top-left = correctly predicted failures. "
+        "Bottom-right = correctly predicted successes. "
+        "Off-diagonal cells are prediction errors."
+    )
+    cm_arr = metrics["cm"]
     fig_cm, ax = plt.subplots(figsize=(4.5, 3.5))
     fig_cm.patch.set_facecolor("#080e1c")
     ax.set_facecolor("#080e1c")
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax,
+    sns.heatmap(cm_arr, annot=True, fmt="d", cmap="Blues", ax=ax,
                 xticklabels=["Failure", "Success"],
                 yticklabels=["Failure", "Success"],
                 annot_kws={"color": "white", "size": 13},
@@ -810,16 +814,17 @@ elif sec == "ML Predictor":
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# ── FEATURE IMPORTANCE ────────────────────────────────────────────────────────
+# FEATURE IMPORTANCE
 # ═════════════════════════════════════════════════════════════════════════════
 elif sec == "Feature Importance":
 
     section_label("What drives the model's predictions?")
-    info("<b>How to read this:</b> Random Forest importance = mean decrease in Gini "
-         "impurity across all decision trees. A higher value means that feature carries "
-         "more information when the model splits the data. "
-         "These are scale-independent and capture non-linear relationships — unlike "
-         "logistic regression coefficients.")
+    info(
+        "<b>How to read this:</b> Random Forest importance = mean decrease in "
+        "Gini impurity across all decision trees. A higher value means the feature "
+        "carries more information at split nodes. These values are scale-independent "
+        "and capture non-linear relationships, unlike logistic regression coefficients."
+    )
 
     fi = feat_imp.sort_values().reset_index()
     fi.columns = ["Feature", "Importance"]
@@ -830,23 +835,27 @@ elif sec == "Feature Importance":
         text=fi["Importance"].round(3),
     )
     fig_fi.update_traces(textposition="outside", textfont_color="#475569")
-    fig_fi.update_layout(**CL, title=None, coloraxis_showscale=False,
-                          yaxis_title="",
-                          xaxis_range=[0, fi["Importance"].max() * 1.25])
+    fig_fi.update_layout(
+        **CL, title=None, coloraxis_showscale=False,
+        yaxis_title="",
+        xaxis_range=[0, fi["Importance"].max() * 1.25],
+    )
     st.plotly_chart(fig_fi, width="stretch")
 
+    top_feat = feat_imp.idxmax()
     info(
-        f"The most influential feature is <b>{feat_imp.idxmax()}</b> "
-        f"(importance = {feat_imp.max():.3f}), reflecting that "
-        + ("operational maturity — captured by when the launch happened — "
-           "is the strongest predictor of mission success."
-           if feat_imp.idxmax() == "Year" else
-           "the rocket choice is the most predictive factor in mission success.")
+        f"The most influential feature is <b>{top_feat}</b> "
+        f"(importance = {feat_imp.max():.3f}). "
+        + ("This reflects that operational maturity — captured by when the launch "
+           "happened — is the strongest predictor of mission success."
+           if top_feat == "Year"
+           else "This indicates that the rocket vehicle is the dominant factor "
+                "in predicting mission success.")
     )
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# ── INSIGHTS — fully dynamic from live data ────────────────────────────────
+# INSIGHTS — fully dynamic
 # ═════════════════════════════════════════════════════════════════════════════
 elif sec == "Insights":
 
@@ -865,7 +874,8 @@ elif sec == "Insights":
         top_pad_sr = sr_by_pad.max()
         top_pad_n  = int((dff["launchpad"] == top_pad).sum())
 
-        yr_first, yr_last = int(dff["year"].min()), int(dff["year"].max())
+        yr_first = int(dff["year"].min())
+        yr_last  = int(dff["year"].max())
         sr_first = float((dff[dff["year"] == yr_first]["success"] == "True").mean() * 100)
         sr_last  = float((dff[dff["year"] == yr_last ]["success"] == "True").mean() * 100)
         sr_delta = sr_last - sr_first
@@ -873,8 +883,8 @@ elif sec == "Insights":
         top_feat     = feat_imp.idxmax()
         top_feat_val = feat_imp.max()
 
-        dom_rocket   = dff["rocket"].mode()[0]
-        dom_share    = (dff["rocket"] == dom_rocket).mean() * 100
+        dom_rocket = dff["rocket"].mode()[0]
+        dom_share  = (dff["rocket"] == dom_rocket).mean() * 100
 
         max_reuse = int(dff["reuse_count"].max())
         avg_reuse = float(dff["reuse_count"].mean())
@@ -883,36 +893,42 @@ elif sec == "Insights":
             if (dff["reuse_count"] > 0).any() else 0)
 
         insights = [
-            (f"🛸 {dom_rocket} leads the manifest",
-             f"{dom_rocket} accounts for <b>{dom_share:.0f}%</b> of launches in this period "
-             f"({top_rocket_n:,} flights of <em>{top_rocket}</em>) and holds the highest "
-             f"success rate at <b>{top_rocket_sr:.1f}%</b> — the most reliable vehicle "
-             f"in commercial orbital launch history."),
-
-            (f"📍 {top_pad} is the most reliable launch site",
-             f"With <b>{top_pad_n}</b> launches and a <b>{top_pad_sr:.1f}%</b> success rate, "
-             f"{top_pad} leads all pads. It handles SpaceX's most complex and "
-             f"high-profile missions, including crewed flights."),
-
-            (f"📈 Reliability {'improved' if sr_delta > 0 else 'shifted'} "
-             f"{sr_delta:+.1f} percentage points ({yr_first}→{yr_last})",
-             f"Fleet success rate moved from <b>{sr_first:.1f}%</b> in {yr_first} to "
-             f"<b>{sr_last:.1f}%</b> in {yr_last}. "
-             f"This trajectory reflects compounding engineering improvements across "
-             f"vehicle design, ground support and launch cadence."),
-
-            (f"🤖 Model signal: '{top_feat}' is the strongest predictor",
-             f"The Random Forest assigns importance <b>{top_feat_val:.3f}</b> to "
-             f"<b>{top_feat}</b>. The model scores <b>AUC {metrics['auc']:.3f}</b> "
-             f"on {metrics['n_test']} held-out launches — well above the 0.5 random "
-             f"baseline and robust to the class imbalance."),
-
-            (f"🔁 Reuse is proven: up to {max_reuse}× with "
-             f"{sr_reused:.1f}% success on reflown boosters",
-             f"Average reuse count in this period: <b>{avg_reuse:.1f}</b>. "
-             f"Reflown boosters achieve a <b>{sr_reused:.1f}%</b> success rate, "
-             f"matching or exceeding the new-booster baseline — validating SpaceX's "
-             f"core economic model and fundamentally reshaping the launch industry."),
+            (
+                f"{dom_rocket} leads the manifest",
+                f"{dom_rocket} accounts for <b>{dom_share:.0f}%</b> of launches "
+                f"in this period ({top_rocket_n:,} flights) and holds the highest "
+                f"success rate at <b>{top_rocket_sr:.1f}%</b> — the most reliable "
+                f"vehicle in commercial orbital launch history.",
+            ),
+            (
+                f"{top_pad} is the most reliable launch site",
+                f"With <b>{top_pad_n}</b> launches and a <b>{top_pad_sr:.1f}%</b> "
+                f"success rate, {top_pad} leads all sites. It handles SpaceX's most "
+                f"complex and high-profile missions, including crewed flights.",
+            ),
+            (
+                f"Reliability {'improved' if sr_delta > 0 else 'shifted'} "
+                f"{sr_delta:+.1f} percentage points ({yr_first} to {yr_last})",
+                f"Fleet success rate moved from <b>{sr_first:.1f}%</b> in {yr_first} "
+                f"to <b>{sr_last:.1f}%</b> in {yr_last}. This trajectory reflects "
+                f"compounding improvements across vehicle design, ground support "
+                f"and launch cadence.",
+            ),
+            (
+                f"Model signal: '{top_feat}' is the strongest predictor",
+                f"The Random Forest assigns importance <b>{top_feat_val:.3f}</b> to "
+                f"<b>{top_feat}</b>. The model achieves AUC <b>{metrics['auc']:.3f}</b> "
+                f"on {metrics['n_test']} held-out launches — well above the 0.5 "
+                f"random baseline and robust to class imbalance.",
+            ),
+            (
+                f"Reuse is proven: up to {max_reuse}x with "
+                f"{sr_reused:.1f}% success on reflown boosters",
+                f"Average reuse count in this period: <b>{avg_reuse:.1f}</b>. "
+                f"Reflown boosters achieve a <b>{sr_reused:.1f}%</b> success rate, "
+                f"matching or exceeding the new-booster baseline — validating "
+                f"SpaceX's core economic model.",
+            ),
         ]
 
         for title, body in insights:
@@ -924,12 +940,12 @@ elif sec == "Insights":
 
         st.caption(
             f"All figures computed from {len(dff):,} launches "
-            f"({year_range[0]}–{year_range[1]}). "
-            "Use the year range slider in the sidebar to watch insights update in real time.")
+            f"({year_range[0]}-{year_range[1]}). "
+            "Use the year range slider in the sidebar to watch insights update.")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# ── DATA EXPLORER ─────────────────────────────────────────────────────────────
+# DATA EXPLORER
 # ═════════════════════════════════════════════════════════════════════════════
 elif sec == "Data Explorer":
 
@@ -944,7 +960,6 @@ elif sec == "Data Explorer":
     }
     show_cols = [c for c in COL_MAP if c in dff.columns]
 
-    # Filters
     fc1, fc2, fc3 = st.columns(3)
     with fc1: fy = st.multiselect("Year",      sorted(dff["year"].dropna().unique()))
     with fc2: fr = st.multiselect("Rocket",    sorted(dff["rocket"].unique()))
@@ -955,40 +970,41 @@ elif sec == "Data Explorer":
     if fr: filt = filt[filt["rocket"].isin(fr)]
     if fp: filt = filt[filt["launchpad"].isin(fp)]
 
-    # Summary KPIs for filtered data
     st.markdown("<br>", unsafe_allow_html=True)
-    f_sr   = (filt["success"] == "True").mean() * 100 if len(filt) else 0
+    f_sr = (filt["success"] == "True").mean() * 100 if len(filt) else 0
     k1, k2, k3, k4 = st.columns(4)
-    kpi(k1, f"{len(filt):,}",                           "Launches shown")
-    kpi(k2, f"{f_sr:.1f}%",                             "Success rate")
-    kpi(k3, str(int((filt["success"]=="True").sum())),   "Successes")
-    kpi(k4, str(int((filt["success"]!="True").sum())),   "Failures")
+    kpi(k1, f"{len(filt):,}",                               "Launches shown")
+    kpi(k2, f"{f_sr:.1f}%",                                 "Success rate")
+    kpi(k3, str(int((filt["success"] == "True").sum())),     "Successes")
+    kpi(k4, str(int((filt["success"] != "True").sum())),     "Failures")
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Live mini chart
     if len(filt) > 1:
-        section_label("Filtered launches by year & outcome")
-        mini = filt.groupby(["year","success"]).size().reset_index(name="count")
-        mini["Outcome"] = mini["success"].map({"True":"Success","False":"Failure"})
+        section_label("Filtered launches by year and outcome")
+        mini = filt.groupby(["year", "success"]).size().reset_index(name="count")
+        mini["Outcome"] = mini["success"].map({"True": "Success", "False": "Failure"})
         fig_m = px.bar(mini, x="year", y="count", color="Outcome",
-                       color_discrete_map={"Success":"#34d399","Failure":"#f87171"},
-                       labels={"count":"Launches","year":"Year"})
+                       color_discrete_map={"Success": "#34d399", "Failure": "#f87171"},
+                       labels={"count": "Launches", "year": "Year"})
         fig_m.update_layout(**CL, title=None, bargap=0.3)
         st.plotly_chart(fig_m, width="stretch")
 
-    # Table
     section_label("Launch records")
     disp = (filt[show_cols]
             .rename(columns=COL_MAP)
             .sort_values("Launch Date", ascending=False)
             .copy())
     disp["Outcome"] = disp["Outcome"].map(
-        {"True": "✅ Success", "False": "❌ Failure"}).fillna(disp["Outcome"])
+        {"True": "Success", "False": "Failure"}).fillna(disp["Outcome"])
     st.dataframe(disp, height=400)
 
     st.caption(f"Showing {len(filt):,} of {len(dff):,} launches in selected range.")
-    st.download_button("⬇️  Download CSV", filt.to_csv(index=False).encode(),
-                       "spacex_filtered.csv", mime="text/csv")
+    st.download_button(
+        "Download CSV",
+        filt.to_csv(index=False).encode(),
+        "spacex_filtered.csv",
+        mime="text/csv",
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
